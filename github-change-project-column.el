@@ -124,21 +124,17 @@
               )
              "\n"))
 
+(defun github-change-project-column-plist-get (source &rest keys)
+  (let ((ret source))
+    (cl-loop for key in keys
+             do (setq ret (plist-get ret key)))
+    ret))
+
 (defun github-change-project-column-choose-next-column (on-success)
   (cl-labels
       ((on-success (data)
-                   (let* ((project-card (car (plist-get
-                                              (plist-get
-                                               (plist-get
-                                                (plist-get
-                                                 (plist-get data :data)
-                                                 :repository)
-                                                :issue)
-                                               :projectCards)
-                                              :nodes)))
-                          (project (plist-get project-card :project))
-                          (columns (plist-get (plist-get project :columns)
-                                              :nodes))
+                   (let* ((project-card (car (github-change-project-column-plist-get data :data :repository :issue :projectCards :nodes)))
+                          (columns (github-change-project-column-plist-get project-card :project :columns :nodes))
                           (current-column (plist-get project-card :projectColumn))
                           (next-column-name (completing-read
                                              (format "Which Column? (Current: %s) "
@@ -190,13 +186,8 @@
 (defun github-change-project-column-move-card (project-card column)
   (cl-labels
       ((on-success (data)
-                   (let ((moved-column (plist-get
-                                        (plist-get
-                                         (plist-get (plist-get (plist-get data :data)
-                                                               :moveProjectCard)
-                                                    :cardEdge)
-                                         :node)
-                                        :column)))
+                   (let ((moved-column
+                          (github-change-project-column-plist-get data :data :moveProjectCard :cardEdge :node :column)))
                      (message "Card moved from to [%s]"
                               (plist-get moved-column :name))))
        (on-error (data)
