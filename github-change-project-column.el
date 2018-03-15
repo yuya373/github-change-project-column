@@ -210,6 +210,7 @@
      :success #'on-success
      :error #'on-error)))
 
+;;;###autoload
 (defun github-change-project-column-move ()
   (interactive)
   (github-change-project-column-choose-next-column
