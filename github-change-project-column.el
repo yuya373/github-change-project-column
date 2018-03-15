@@ -56,6 +56,15 @@
   :group 'github-change-project-column
   :type 'string)
 
+(defun github-change-project-column-parse-url ()
+  (let ((line (thing-at-point 'line t)))
+    (when (string-match
+           "https://github.com/\\(\\w+\\)/\\(\\w+\\)/issues/\\([0-9]+\\)"
+           line)
+      (list (match-string 1 line)
+            (match-string 2 line)
+            (match-string 3 line)))))
+
 (defun github-change-project-column-issue-number ()
   "Return Issue number."
   (let ((number (if (functionp github-change-project-column-issue-number-parser)
