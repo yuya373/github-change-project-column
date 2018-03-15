@@ -125,7 +125,6 @@
              "\n"))
 
 (defun github-change-project-column-choose-next-column (on-success)
-  (interactive)
   (cl-labels
       ((on-success (data)
                    (let* ((project-card (car (plist-get
