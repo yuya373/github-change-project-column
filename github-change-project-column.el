@@ -240,5 +240,76 @@
                :error #'on-error
                :success #'on-success))))
 
+(defun github-change-project-column-get-issue (owner name issue-number on-success)
+  (cl-labels
+      ((on-success (data)
+                   (funcall on-success data)))
+    (github-change-project-column-rest-api
+     (format "/repos/%s/%s/issues/%s" owner name issue-number)
+     :type "GET"
+     :success #'on-success)))
+
+;;;###autoload
+(defun github-change-project-column-update-issue-state ()
+  (interactive)
+  (let ((owner (github-change-project-column-repository-owner))
+        (name (github-change-project-column-repository-name))
+        (issue-number (github-change-project-column-issue-number)))
+    (cl-labels
+        ((update-issue-state (state next-state)
+                             (github-change-project-column-rest-api
+                              (format "/repos/%s/%s/issues/%s"
+                                      owner name issue-number)
+                              :type "PATCH"
+                              :data (list (cons "state" next-state))
+                              :success #'(lambda (data)
+                                           (message "Updated to [%s] from [%s]"
+                                                    (plist-get data :state)
+                                                    state))))
+         (on-success-get-issue (issue)
+                               (let* ((issue-state (plist-get issue :state))
+                                      (next-state (if (string= issue-state "open")
+                                                      "closed"
+                                                    "open")))
+                                 (if (y-or-n-p
+                                      (format "Current state is [%s], update to [%s] ?"
+                                              issue-state next-state))
+                                     (update-issue-state issue-state next-state)))))
+      (github-change-project-column-get-issue
+       owner name issue-number #'on-success-get-issue))))
+
+(cl-defun github-change-project-column-rest-api (path &key type (headers nil) (params nil) (data nil) success error)
+  (cl-labels
+      ((on-success (&key data &allow-other-keys)
+                   (funcall success data))
+       (on-error (&key error-thrown symbol-status response data &allow-other-keys)
+                 (if (functionp error)
+                     (funcall error
+                              :error-thrown error-thrown
+                              :symbol-status symbol-status
+                              :response response
+                              :data data)
+                   (message "ERROR-THROWN: %s, SYMBOL-STATUS: %s, DATA: %s"
+                            error-thrown
+                            symbol-status
+                            data))))
+    (let ((token github-change-project-column-github-token)
+          (url (format "https://api.github.com%s" path))
+          (request-log-level 'debug))
+      (request url
+               :type type
+               :data (and data (json-encode data))
+               :params params
+               :parser #'(lambda () (let ((json-object-type 'plist)
+                                          (json-array-type 'list))
+                                      (json-read)))
+               :headers (or headers
+                            (list (cons "Authorization" (format "token %s" token))
+                                  (cons "User-Agent" "Emacs")
+                                  (cons "Content-Type" "application/json")))
+               :success #'on-success
+               :error #'on-error
+               ))))
+
 (provide 'github-change-project-column)
 ;;; github-change-project-column.el ends here
